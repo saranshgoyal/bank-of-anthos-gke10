@@ -1,0 +1,25 @@
+Requirements
+The Challenge: Give Microservices an AI Upgrade
+Supercharge an existing microservice application with agentic AI. You'll start with one of our pre-built applications—either the Bank of Anthos or the Online Boutique—and build on top of it.
+
+The twist? You won't touch the core application code. Instead, you'll build new, containerized components that interact with the application's existing APIs. Think of it as building a smart, external brain that adds a whole new layer of intelligence.
+
+Here's the tech you'll be working with:
+
+Key technologies to be leveraged include:
+
+Required:
+Google Kubernetes Engine (GKE): The chosen platform for deploying your enhanced microservice application and any new agentic components.
+
+Google AI Models: Incorporate Google AI models, such as Gemini, to power your agentic functionalities.
+
+Optional:
+Agent Development Kit (ADK): A strongly recommended (but not strictly required) toolkit for building your agents.
+
+Model Context Protocol (MCP): Utilize MCP to connect and communicate with existing microservice APIs. You can deploy an MCP server on GKE alongside the application.
+
+Agent2Agent (A2A) protocol: Explore how A2A can facilitate orchestration and communication between different agent components, enabling complex workflows.
+
+Kubectl-ai: kubectl-ai acts as an intelligent interface, translating user intent into precise Kubernetes operations, making Kubernetes management more accessible and efficient.
+
+Gemini CLI: Gemini CLI is a command-line AI workflow tool that connects to your tools, understands your code and accelerates your workflows.

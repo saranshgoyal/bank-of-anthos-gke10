@@ -1,0 +1,60 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-assistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-assistant
+  template:
+    metadata:
+      labels:
+        app: ai-assistant
+    spec:
+      containers:
+        - name: server
+          image: ai-assistant # This will be replaced by Skaffold
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PROJECT_ID
+              value: "your-gcp-project-id" # CHANGE_ME
+            - name: REGION
+              value: "us-central1" # CHANGE_ME
+            - name: BALANCE_READER_SERVICE_ADDR
+              value: "balancereader:8080"
+            - name: TRANSACTION_HISTORY_SERVICE_ADDR
+              value: "transactionhistory:8080"
+            - name: ACCOUNTS_SERVICE_ADDR
+              value: "accounts:8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-assistant
+spec:
+  type: ClusterIP
+  selector:
+    app: ai-assistant
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
