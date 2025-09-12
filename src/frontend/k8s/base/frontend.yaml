@@ -96,6 +96,8 @@ spec:
         #   value: "gcp"
         envFrom:
         - configMapRef:
+            name: ai-assistant-config
+        - configMapRef:
             name: environment-config
         - configMapRef:
             name: service-api-config

@@ -613,6 +613,33 @@ def create_app():
         resp.delete_cookie(app.config['CONSENT_COOKIE'])
         return resp
 
+    @app.route('/ask', methods=['POST'])
+    def ask_assistant():
+        """
+        Proxies a question to the ai-assistant service.
+        """
+        token = request.cookies.get(app.config['TOKEN_NAME'])
+        if not verify_token(token):
+            return abort(401)
+
+        req_data = request.get_json()
+        if not req_data or 'message' not in req_data:
+            return jsonify({'error': 'message not found in request'}), 400
+
+        try:
+            app.logger.info(f"asking ai-assistant: {req_data['message']}")
+            hed = {'Authorization': 'Bearer ' + token,
+                   'content-type': 'application/json'}
+            resp = requests.post(url=app.config["AI_ASSISTANT_URI"],
+                                 data=json.dumps(req_data),
+                                 headers=hed,
+                                 timeout=app.config['BACKEND_TIMEOUT']*5) # Increased timeout for AI
+            resp.raise_for_status()
+            return jsonify(resp.json())
+        except (RequestException, HTTPError) as err:
+            app.logger.error('Error calling ai-assistant: %s', str(err))
+            return jsonify({'error': 'ai service unavailable'}), 500
+
     def decode_token(token):
         return jwt.decode(algorithms='RS256',
                           jwt=token,
@@ -671,6 +698,8 @@ def create_app():
         os.environ.get('USERSERVICE_API_ADDR'))
     app.config["CONTACTS_URI"] = 'http://{}/contacts'.format(
         os.environ.get('CONTACTS_API_ADDR'))
+    app.config["AI_ASSISTANT_URI"] = 'http://{}/chat'.format(
+        os.environ.get('AI_ASSISTANT_API_ADDR'))
     app.config['PUBLIC_KEY'] = open(os.environ.get('PUB_KEY_PATH'), 'r').read()
     app.config['LOCAL_ROUTING'] = os.getenv('LOCAL_ROUTING_NUM')
     # timeout in seconds for calls to the backend

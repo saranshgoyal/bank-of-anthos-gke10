@@ -371,9 +371,35 @@ limitations under the License.
         </div>
       </div>
     </main>
+
+    <!-- AI Chat Widget -->
+    <div id="chat-widget-container">
+      <div id="chat-bubble">
+        <button id="chat-open-button" class="btn btn-primary">
+          <span class="material-icons">smart_toy</span>
+        </button>
+      </div>
+      <div id="chat-window" class="hidden">
+        <div id="chat-header">
+          <span>AI Assistant</span>
+          <button id="chat-close-button">&times;</button>
+        </div>
+        <div id="chat-messages">
+          <!-- Messages will be added here -->
+        </div>
+        <div id="chat-input-container">
+          <input type="text" id="chat-input" placeholder="Ask me anything...">
+          <button id="chat-send-button" class="btn btn-primary">
+            <span class="material-icons">send</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
 {% include 'shared/footer.html' %}
 {% include 'shared/scripts.html' %}
     <!-- Page specific-->
     <script src="static/scripts/index.js"></script>
+    <script src="static/scripts/chat.js"></script>
   </body>
 </html>
