@@ -14,115 +14,97 @@
 
 import os
 import logging
+import json
 from flask import Flask, request, jsonify
 
 # TODO: Import generated gRPC stubs for Bank of Anthos services
 # from gen import ...
 
-# TODO: Import Gemini client library
-# from google.cloud import aiplatform
-# import vertexai
-# from vertexai.generative_models import GenerativeModel
+# Import ADK and Gemini client libraries
+from google.cloud.adk.agent import Agent
+from google.cloud.adk.tools import tool
+import vertexai
+from vertexai.generative_models import GenerativeModel
 
 # --- Boilerplate Setup ---
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# TODO: Initialize Vertex AI
-# try:
-#     project_id = os.environ.get("PROJECT_ID")
-#     location = os.environ.get("REGION", "us-central1")
-#     vertexai.init(project=project_id, location=location)
-#     model = GenerativeModel("gemini-1.0-pro")
-#     logger.info("Vertex AI initialized successfully.")
-# except Exception as e:
-#     logger.error(f"Error initializing Vertex AI: {e}")
-#     model = None
+# --- Agent Tools ---
+# The ADK will use the function's docstring to understand what the tool does.
+# The type hints (e.g., amount: float) are used to generate the tool's schema.
 
-# --- Helper Functions ---
+@tool
+def get_balance() -> str:
+    """Gets the current balance for the user's checking account."""
+    logger.info("Executing tool: get_balance")
+    # TODO: Set up gRPC channel and call balancereader service.
+    # This is where you would make the real gRPC call.
+    return "Your checking account balance is $1,234.56. (mocked)"
 
-def get_intent_from_gemini(user_message: str) -> dict:
+@tool
+def list_transactions(limit: int = 5) -> str:
+    """Lists the most recent transactions for the user, up to a specified limit."""
+    logger.info(f"Executing tool: list_transactions with limit={limit}")
+    # TODO: Set up gRPC channel and call transactionhistory service.
+    return f"Here are your last {limit} transactions: ... (mocked)"
+
+@tool
+def send_money(amount: float, recipient: str) -> str:
     """
-    Uses Gemini to parse the user's message and extract intent and entities.
+    Sends a specified amount of money to a recipient.
+
+    Args:
+        amount: The numeric amount of money to send.
+        recipient: The name or account number of the person to send money to.
     """
-    logger.info(f"Getting intent for message: '{user_message}'")
+    logger.info(f"Executing tool: send_money with amount=${amount}, recipient='{recipient}'")
+    # TODO: Set up gRPC channel and call accounts service.
+    return f"Transaction initiated to send ${amount} to {recipient}. (mocked)"
 
-    # --- MOCK IMPLEMENTATION ---
-    # Replace this with the actual Gemini call.
-    logger.warning("Using MOCK implementation for Gemini. Replace for production.")
-    if "balance" in user_message.lower():
-        return {"intent": "get_balance", "entities": {}}
-    elif "transaction" in user_message.lower():
-        return {"intent": "list_transactions", "entities": {"limit": 5}}
-    elif "send" in user_message.lower() and ("$" in user_message or "to" in user_message):
-        amount = 25.0 # default
-        for word in user_message.split():
-            if word.startswith('$'):
-                try:
-                    amount = float(word[1:])
-                except ValueError:
-                    pass
-        return {"intent": "send_money", "entities": {"amount": amount, "recipient": "friend"}}
-    else:
-        return {"intent": "unknown", "entities": {}}
-    # --- END MOCK ---
+# --- Agent Initialization ---
 
-def execute_action(intent_data: dict, auth_token: str) -> str:
-    """
-    Calls the appropriate Bank of Anthos microservice based on the intent.
-    """
-    intent = intent_data.get("intent")
-    entities = intent_data.get("entities", {})
-    logger.info(f"Executing action for intent: '{intent}' with entities: {entities}")
-
-    # TODO: Set up gRPC channels to other services using their k8s service names.
-    # balancereader_channel = grpc.insecure_channel(os.environ.get("BALANCE_READER_SERVICE_ADDR"))
-
-    if intent == "get_balance":
-        # TODO: Call balancereader service via gRPC
-        return "Your checking account balance is $1,234.56. (mocked)"
-
-    elif intent == "list_transactions":
-        # TODO: Call transactionhistory service via gRPC
-        return "Here are your last 5 transactions: ... (mocked)"
-
-    elif intent == "send_money":
-        # TODO: Call accounts service via gRPC
-        amount = entities.get('amount', 0)
-        recipient = entities.get('recipient', 'unknown')
-        return f"Transaction initiated to send ${amount} to {recipient}. (mocked)"
-
-    elif intent == "unknown":
-        return "I'm sorry, I don't understand. I can check balances, list transactions, or send money."
-
-    else:
-        return "I'm sorry, something went wrong processing your request."
+try:
+    project_id = os.environ.get("PROJECT_ID")
+    location = os.environ.get("REGION", "us-central1")
+    vertexai.init(project=project_id, location=location)
+    model = GenerativeModel("gemini-1.5-flash-001") # Using a fast model
+    # Create an agent with our defined tools
+    agent = Agent(
+        model=model,
+        tools=[get_balance, list_transactions, send_money],
+        # You can add instructions to guide the agent's behavior
+        instructions="You are a friendly and helpful banking assistant."
+    )
+    logger.info("Vertex AI and ADK Agent initialized successfully.")
+except Exception as e:
+    logger.error(f"Error initializing Vertex AI or Agent: {e}")
+    agent = None # Set agent to None if initialization fails
 
 # --- API Endpoint ---
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """
-    Main endpoint to handle user chat messages.
-    """
+    """Main endpoint to handle user chat messages using the ADK Agent."""
+    if not agent:
+        return jsonify({"error": "Agent not initialized. Check logs for details."}), 503
+
     data = request.get_json()
     if not data or "message" not in data:
         return jsonify({"error": "Invalid request. 'message' is required."}), 400
 
     user_message = data["message"]
-    auth_token = request.headers.get("Authorization", "Bearer FAKE_JWT_TOKEN")
+    logger.info(f"Received message: '{user_message}'")
 
-    # 1. Get intent from Gemini (or mock)
-    intent_data = get_intent_from_gemini(user_message)
-    if "error" in intent_data:
-        return jsonify({"response": intent_data["error"]}), 500
-
-    # 2. Execute the corresponding action (or mock)
-    response_message = execute_action(intent_data, auth_token)
-
-    # 3. Return the response to the user
-    return jsonify({"response": response_message})
+    # Let the agent handle the entire reasoning process
+    try:
+        response_message = agent.run(user_message)
+        logger.info(f"Agent response: '{response_message}'")
+        return jsonify({"response": response_message})
+    except Exception as e:
+        logger.error(f"Agent execution failed: {e}")
+        return jsonify({"error": "An error occurred while processing your request."}), 500
 
 
 if __name__ == "__main__":
