@@ -64,18 +64,22 @@ def send_money(amount: float, recipient: str) -> str:
     return f"Transaction initiated to send ${amount} to {recipient}. (mocked)"
 
 # --- Agent Initialization ---
+# Use one of the model constants defined earlier
+MODEL_GEMINI_2_5_FLASH = "gemini-2.5-flash"
+AGENT_MODEL = MODEL_GEMINI_2_5_FLASH
 
 try:
     project_id = os.environ.get("PROJECT_ID")
     location = os.environ.get("REGION", "us-central1")
     vertexai.init(project=project_id, location=location)
-    model = GenerativeModel("gemini-1.5-flash-001") # Using a fast model
+    # model = GenerativeModel("gemini-1.5-flash-001") # Using a fast model
+    model = AGENT_MODEL
     # Create an agent with our defined tools
     agent = Agent(
         model=model,
         tools=[get_balance, list_transactions, send_money],
         # You can add instructions to guide the agent's behavior
-        instructions="You are a friendly and helpful banking assistant."
+        instructions="You are a friendly and helpful banking assistant, Understand the user inputs and use the avaialble tools to assist, if you don't the the required tools to fulfill the request, Simply say no, that you can process this request.",
     )
     logger.info("Vertex AI and ADK Agent initialized successfully.")
 except Exception as e:

@@ -19,7 +19,7 @@ metadata:
 requires:
 - configs:
   - e2e-tests
-  path: ../../../skaffold-e2e.yaml
+  path: ../../skaffold-e2e.yaml
 build:
   artifacts:
   - image: ai-assistant
