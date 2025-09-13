@@ -1,3 +1,4 @@
 Flask>=2.0
-google-cloud-adk
-grpcio>=1.49.1
+google-adk==1.3.0
+google-cloud-aiplatform==1.111.0
+grpcio
