@@ -14,10 +14,52 @@
 
 # @title Import necessary libraries
 from google.adk.agents import Agent
-# from google.adk.models.lite_llm import LiteLlm # For multi-model support
 from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# @title Define the get_balance Tool
+def get_balance() -> str:
+    """
+    Gets the current balance for the user's checking account.    
+    """
+    logger.info("Executing tool: get_balance")
+    # TODO: Set up gRPC channel and call balancereader service.
+    # This is where you would make the real gRPC call.
+    return "Your checking account balance is $1,234.56. (mocked)"
+
+
+# @title Define the list_transactions Tool
+def list_transactions(limit: int = 5) -> str:
+    """
+    Lists the most recent transactions for the user, up to a specified limit.
+    """
+    logger.info(f"Executing tool: list_transactions with limit={limit}")
+    # TODO: Set up gRPC channel and call transactionhistory service.
+    return f"Here are your last {limit} transactions: ... (mocked)"
+
+# @title Define the send_money Tool
+def send_money(amount: float, recipient: str) -> str:
+    """
+    Sends a specified amount of money to a recipient.
+
+    Args:
+        amount: The numeric amount of money to send.
+        recipient: The name or account number of the person to send money to.
+        
+    """
+
+    # {"account_num": "9099791699", "routing_num": "808889588" }
+    #account=%7B%22account_num%22%3A+%229099791699%22%2C+%22routing_num%22%3A+%22808889588%22+%7D&external_account_num=&external_routing_num=&external_label=&amount=25&uuid=ed6bb2f2-6ef0-4e12-ab48-78eb622e2398
+
+    logger.info(f"Executing tool: send_money with amount=${amount}, recipient='{recipient}'")
+    # TODO: Set up gRPC channel and call accounts service.
+    return f"Transaction initiated to send ${amount} to {recipient}. (mocked)"
 
 
 # @title Define the get_weather Tool
@@ -61,15 +103,14 @@ AGENT_MODEL = MODEL_GEMINI_2_5_FLASH
 
 
 root_agent = Agent(
-    name="banking_agent_v1",
+    name="banking_agent",
     model=AGENT_MODEL, # Can be a string for Gemini or a LiteLlm object
-    description="Provides weather information for specific cities.",
-    instruction="You are a helpful weather assistant. "
-                "When the user asks for the weather in a specific city, "
-                "use the 'get_weather' tool to find the information. "
-                "If the tool returns an error, inform the user politely. "
-                "If the tool is successful, present the weather report clearly.",
-    tools=[get_weather], # Pass the function directly
+    description="Provides answer questions about the Banking Related Services.",
+    instruction="You are a friendly and helpful banking assistant." 
+                 " Understand the user inputs and use the available tools to assist." 
+                 " If you don't have the required tools to fulfill the request," 
+                 " simply say that you cannot process this request.",
+    tools=[get_balance, list_transactions, send_money],
 )
 
 # Sample queries to test the agent: 
