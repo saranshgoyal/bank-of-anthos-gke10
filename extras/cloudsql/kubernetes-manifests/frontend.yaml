@@ -82,6 +82,8 @@ spec:
             name: environment-config
         - configMapRef:
             name: service-api-config
+        - configMapRef:
+            name: ai-assistant-config
         # Customize the metadata server hostname to query for metadata
         #- name: METADATA_SERVER
         #  value: "my-metadata-server"

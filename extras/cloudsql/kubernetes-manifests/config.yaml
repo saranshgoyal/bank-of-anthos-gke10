@@ -65,3 +65,12 @@ data:
   SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/ledger-db
   SPRING_DATASOURCE_USERNAME: admin # should match POSTGRES_USER
   SPRING_DATASOURCE_PASSWORD: admin # should match POSTGRES_PASSWORD
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-assistant-config
+data:
+  # Use Google Compute Engine Internal DNS addresses for ai-assistant services
+  # https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names
+  AI_ASSISTANT_API_ADDR: "ai-assistant:8080"
