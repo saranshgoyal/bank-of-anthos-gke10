@@ -19,19 +19,21 @@ from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
 
 import logging
+from .api_call import ApiCall, ApiRequest
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # @title Define the get_balance Tool
-def get_balance() -> str:
-    """
-    Gets the current balance for the user's checking account.    
-    """
-    logger.info("Executing tool: get_balance")
-    # TODO: Set up gRPC channel and call balancereader service.
-    # This is where you would make the real gRPC call.
-    return "Your checking account balance is $1,234.56. (mocked)"
+# def get_balance() -> str:
+#     """
+#     Gets the current balance for the user's checking account.    
+#     """
+#     logger.info("Executing tool: get_balance")
+#     # TODO: Set up gRPC channel and call balancereader service.
+#     # This is where you would make the real gRPC call.
+#     return "Your checking account balance is $1,234.56. (mocked)"
 
 
 # @title Define the list_transactions Tool
@@ -95,6 +97,61 @@ def get_weather(city: str) -> dict:
 # print(get_weather("Paris"))
 
 # @title Define the Weather Agent
+
+
+def decode_token(token):
+        return jwt.decode(algorithms='RS256',
+                          jwt=token,
+                          options={"verify_signature": False})
+
+
+# Local constants
+BALANCE_NAME = "balance"
+CONTACTS_NAME = "contacts"
+TRANSACTION_LIST_NAME = "transaction_list"
+
+
+# @title Define the get_balance Tool
+def get_balance(display_name: str, username: str, account_id: str , hed: str):
+    """
+    To Get the Current Balance for the user's checking account.
+     Args:
+        display_name (str): The display_name for which the account Balance needs to be checked.
+        username (str): The username for which the account Balance needs to be checked.
+        account_id (str): The account_id for which the account Balance needs to be checked.
+        hed (str): The Token of user to make the API call.
+    """
+
+    api_calls = [
+        # get balance
+        ApiCall(display_name=BALANCE_NAME,
+                api_request=ApiRequest(url=f'{app.config["BALANCES_URI"]}/{account_id}',
+                                        headers=hed,
+                                        timeout=app.config['BACKEND_TIMEOUT']),
+                logger=app.logger),
+    ]
+
+    api_response = {BALANCE_NAME: None}
+
+    tracer = trace.get_tracer(__name__)
+    with TracedThreadPoolExecutor(tracer, max_workers=3) as executor:
+        futures = []
+
+        future_to_api_call = {
+            executor.submit(api_call.make_call):
+                api_call for api_call in api_calls
+        }
+
+        for future in concurrent.futures.as_completed(future_to_api_call):
+            if future.result():
+                api_call = future_to_api_call[future]
+                api_response[api_call.display_name] = future.result().json()
+
+
+    return "The Balance is $1234.56"
+
+
+
 
 # --- Agent Initialization ---
 # Use one of the model constants defined earlier
