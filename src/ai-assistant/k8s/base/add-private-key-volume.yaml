@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - ai-assistant.yaml
-components:
-  # - ../../../components/accounts. TODO: Remove if not needed
-  - ../../../components/backend-service
-patches:
-  - target:
-      kind: Deployment
-    path: add-private-key-volume.yaml
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: keys
+    secret:
+      secretName: jwt-key
+      items:
+      - key: jwtRS256.key
+        path: privatekey
+      - key: jwtRS256.key.pub
+        path: publickey
+- op: add
+  path: /spec/template/spec/containers/0/volumeMounts/-
+  value:
+    name: keys
+    mountPath: "/tmp/.ssh"
+    readOnly: true
