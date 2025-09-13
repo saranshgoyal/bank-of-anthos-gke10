@@ -616,7 +616,8 @@ def create_app():
     @app.route('/ask', methods=['POST'])
     def ask_assistant():
         """
-        Proxies a question to the ai-assistant service.
+        Banking Assistant which uses Agentic AI Agensts to help users.
+        It Proxies a question to the AI Agents.
         """
         token = request.cookies.get(app.config['TOKEN_NAME'])
         if not verify_token(token):
@@ -630,6 +631,7 @@ def create_app():
             app.logger.info(f"asking ai-assistant: {req_data['message']}")
             hed = {'Authorization': 'Bearer ' + token,
                    'content-type': 'application/json'}
+            app.logger.info(f"URL for ai-assistant: {app.config['AI_ASSISTANT_URI']}")
             resp = requests.post(url=app.config["AI_ASSISTANT_URI"],
                                  data=json.dumps(req_data),
                                  headers=hed,

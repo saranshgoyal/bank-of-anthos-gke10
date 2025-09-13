@@ -20,6 +20,8 @@ FROM base as builder
 # Install dependencies.
 COPY requirements.txt .
 RUN pip install --prefix="/install" -r requirements.txt
+# In your frontend Dockerfile
+
 
 FROM base
 
@@ -27,6 +29,10 @@ FROM base
 WORKDIR /app
 
 COPY --from=builder /install /usr/local
+
+# Install curl
+RUN apt-get update && apt-get install -y curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # show python logs as they occur
 ENV PYTHONUNBUFFERED=0
