@@ -40,3 +40,12 @@ data:
   DEMO_LOGIN_USERNAME: "testuser"
   # All demo user accounts are hardcoded to use the login password 'bankofanthos'
   DEMO_LOGIN_PASSWORD: "bankofanthos"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-assistant-config
+data:
+  # Use Google Compute Engine Internal DNS addresses for ai-assistant services
+  # https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names
+  AI_ASSISTANT_API_ADDR: "ai-assistant:8080"  
