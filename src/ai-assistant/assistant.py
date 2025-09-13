@@ -39,6 +39,10 @@ def create_app():
     of the AI-Assistant Flask App
     """
     app = Flask(__name__)
+    # Set up logging
+    app.logger.handlers = logging.getLogger('gunicorn.error').handlers
+    app.logger.setLevel(logging.getLogger('gunicorn.error').level)
+    app.logger.info('Starting frontend service.')
 
     # Disabling unused-variable for lines with route decorated functions
     # as pylint thinks they are unused
@@ -71,7 +75,7 @@ def create_app():
     
         # Check if the 'message' parameter exists in the URL
         if message:
-            print(f"Received message: {message}")
+            print(f"Received message in GET: {message}")
             
             # Return a success response with the received message
             return jsonify({"status": "success", "received_message": message}), 200
@@ -90,7 +94,7 @@ def create_app():
         if 'message' in data:
             # Extract the message and print it to the console
             message = data['message']
-            print(f"Received message: {message}")
+            print(f"Received message in POST: {message}")
             
 
             # Return a success response

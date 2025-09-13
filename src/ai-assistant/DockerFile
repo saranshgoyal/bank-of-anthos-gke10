@@ -47,4 +47,4 @@ COPY . .
 RUN chmod a+r *
 
 # Start server using gunicorn
-CMD gunicorn -b :$PORT --threads 2 --log-config logging.conf --log-level=$LOG_LEVEL "v2-assistant:create_app()"
+CMD gunicorn -b :$PORT --threads 2 --log-config logging.conf --log-level=$LOG_LEVEL "assistant:create_app()"
