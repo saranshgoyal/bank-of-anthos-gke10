@@ -21,8 +21,8 @@ from flask import Flask, request, jsonify
 # from gen import ...
 
 # Import ADK and Gemini client libraries
-from google.cloud.adk.agent import Agent
-from google.cloud.adk.tools import tool
+from google.adk.agents import Agent
+# from google.adk.tools import tool
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
@@ -35,7 +35,9 @@ logger = logging.getLogger(__name__)
 # The ADK will use the function's docstring to understand what the tool does.
 # The type hints (e.g., amount: float) are used to generate the tool's schema.
 
-@tool
+
+GOOGLE_GENAI_USE_VERTEXAI=True
+
 def get_balance() -> str:
     """Gets the current balance for the user's checking account."""
     logger.info("Executing tool: get_balance")
@@ -43,14 +45,14 @@ def get_balance() -> str:
     # This is where you would make the real gRPC call.
     return "Your checking account balance is $1,234.56. (mocked)"
 
-@tool
+
 def list_transactions(limit: int = 5) -> str:
     """Lists the most recent transactions for the user, up to a specified limit."""
     logger.info(f"Executing tool: list_transactions with limit={limit}")
     # TODO: Set up gRPC channel and call transactionhistory service.
     return f"Here are your last {limit} transactions: ... (mocked)"
 
-@tool
+
 def send_money(amount: float, recipient: str) -> str:
     """
     Sends a specified amount of money to a recipient.
@@ -72,19 +74,24 @@ try:
     project_id = os.environ.get("PROJECT_ID")
     location = os.environ.get("REGION", "us-central1")
     vertexai.init(project=project_id, location=location)
-    # model = GenerativeModel("gemini-1.5-flash-001") # Using a fast model
-    model = AGENT_MODEL
+    model = GenerativeModel(
+        AGENT_MODEL,
+        # Pass instructions to the model, not the agent
+        system_instruction="You are a friendly and helpful banking assistant. Understand the user inputs and use the available tools to assist. If you don't have the required tools to fulfill the request, simply say that you cannot process this request."
+    )
     # Create an agent with our defined tools
     agent = Agent(
+        name="banking-assistant",
         model=model,
+        description=(
+        "Agent to answer questions about the Banking Related Services."),
         tools=[get_balance, list_transactions, send_money],
-        # You can add instructions to guide the agent's behavior
-        instructions="You are a friendly and helpful banking assistant, Understand the user inputs and use the avaialble tools to assist, if you don't the the required tools to fulfill the request, Simply say no, that you can process this request.",
     )
+
     logger.info("Vertex AI and ADK Agent initialized successfully.")
 except Exception as e:
     logger.error(f"Error initializing Vertex AI or Agent: {e}")
-    agent = None # Set agent to None if initialization fails
+    root_agent = None # Set agent to None if initialization fails
 
 # --- API Endpoint ---
 

@@ -26,8 +26,24 @@ build:
     context: .
   tagPolicy:
     sha256: {}
+# test:
+  # - image: ai-assistant # code style
+  #   context: .
+  #   custom:
+  #     - command: |
+  #         pip install --upgrade pip
+  #         pip install pylint --quiet --no-cache-dir
+  #         pip install -r requirements.txt --quiet --no-cache-dir
+  #         pylint --rcfile=../../.pylintrc *.py
+  #       timeoutSeconds: 180
+  #       dependencies: 
+  #         paths:
+  #           - "**/*.py"
+  #           - "../../.pylintrc"
+  #           - "requirements.txt"    
 deploy:
   kubectl: {}
+  tolerateFailuresUntilDeadline: true
 profiles:
 - name: development
   activation:
@@ -36,7 +52,7 @@ profiles:
     kustomize:
       paths:
       - k8s/overlays/development  
-      - ../../../iac/acm-multienv-cicd-anthos-autopilot/overlays/development
+      - ../../iac/acm-multienv-cicd-anthos-autopilot/overlays/development
 - name: staging
   manifests:
     kustomize:
