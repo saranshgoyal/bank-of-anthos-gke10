@@ -20,10 +20,15 @@ import atexit
 from datetime import datetime, timedelta
 import logging
 import os
+import json
 
 import bcrypt
 import jwt
+import requests
 from flask import Flask, jsonify, request
+from requests.exceptions import HTTPError, RequestException
+
+from adk_util import get_or_create_adk_session
 
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -101,14 +106,157 @@ def create_app():
             # message = data['message']
             app.logger.info(f"####Received message in POST Request: {message}")
             
+            auth_header = request.headers.get('Authorization')
+            token = auth_header.split(' ')[1] if auth_header else None
+            app.logger.info(f"Token from Cookie: {token}")
 
+            token_data = decode_token(token, app.config['PUBLIC_KEY'])
+            display_name = token_data['name']
+            username = token_data['user']
+            account_id = token_data['acct']
+
+            app.logger.info(f"User Details from Token: {display_name}, {username}, {account_id}")
+
+            res = call_agent_v1(token, data, token_data)
+
+            # agent_response = res.json()
+            # app.logger.info(f"----Raw Response from AI Agent: {agent_response}")
+            app.logger.info(f"----Raw Response from AI Agent: {res}")
+
+            # parsed_response = _parse_agent_response(agent_response)
+            parsed_response = _parse_agent_response(res)
+
+            app.logger.info(f"----Parsed Response to UI: {parsed_response}")
+            
+
+            app.logger.info(f"----WITH JSONIFY Parsed Response to UI: {jsonify(parsed_response)}")
+
+            return jsonify(parsed_response)
+            
             # Return a success response
             # return jsonify({"status": "success", "received_message": message}), 200
-            return jsonify({"response": f"I am a virtual assistant. You said: {message}"}), 200
+            # return jsonify({"response": f"I am a virtual assistant. You said: {message}"}), 200
+
+            # return res
 
         else:
             # Return an error response if the message is missing
             return jsonify({"response": "Please say something....."}), 400
+
+    def call_agent():
+        """Calls the AI Agent to handle user queries"""
+        try:
+            app.logger.info(f"Calling Banking AI-Agent : {query}")
+            hed = {'Authorization': 'Bearer ' + token,
+                    'content-type': 'application/json'}
+            app.logger.info(f"URL for BANKING_AGENT: {app.config['AI_AGENT_URI']}")
+            resp = requests.post(url=app.config["AI_AGENT_URI"],
+                                    data=json.dumps(query),
+                                    headers=hed,
+                                    timeout=app.config['BACKEND_TIMEOUT']*5) # Increased timeout for AI
+            resp.raise_for_status()
+            # TODO - TO BE REMOVED
+            app.logger.info(f"Response From Agent: {resp.json}")
+            app.logger.info(f"Response From Agent in JSON Format: {jsonify(resp.json())}")
+            app.logger.info(f"###Response From Agent: {resp.text}")
+            
+            return jsonify(resp.json())
+        except (RequestException, HTTPError) as err:
+            app.logger.error('Error calling ai-assistant: %s', str(err))
+            return jsonify({'error': 'ai service unavailable'}), 500
+
+    def call_agent_v1(token, query, user_info):
+        """
+        Calls the AI Agent to handle user queries.
+        
+        Args:
+            token (str): The authorization token.
+            query (dict): The user query in JSON format.
+            user_info (dict): Decoded user information from the token.
+            
+        Returns:
+            tuple: A tuple containing the JSON response and HTTP status code.
+        """
+        try:
+            app.logger.info(f"Calling Banking AI-Agent : {query}")
+            # Create a session-specific conversation ID.
+            # A simple approach is to use the user's username and account ID.
+            user_id = user_info.get('user')
+            session_id = user_info.get('acct')
+
+            session_id = get_or_create_adk_session(
+                                                        base_url="http://banking-agent:80",
+                                                        app_name="banking-agent",
+                                                        user_id=user_id,
+                                                        session_id=session_id)
+            
+            app.logger.info(f"*****Using ADK Session ID: {session_id} *********")
+            
+            # Construct the payload for the ADK /run endpoint.
+            agent_payload = {
+                "app_name": "banking-agent",
+                "user_id": user_id,
+                "session_id": session_id,
+                "new_message": {
+                    "role": "user",
+                    "parts": [{"text": query.get('message')}]
+                },
+                "user_info": user_info # Pass user info for the agent's tools
+            }
+
+            app.logger.info(f"Calling Banking AI-Agent with payload: {agent_payload}")
+            hed = {'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'}
+            
+            AI_BANKING_AGENT_URI = app.config["AI_BANKING_AGENT_URI"]
+            app.logger.info(f"URL : {AI_BANKING_AGENT_URI}")
+
+            resp = requests.post(url=AI_BANKING_AGENT_URI, data=json.dumps(agent_payload),
+                                headers=hed,
+                                timeout=app.config['BACKEND_TIMEOUT'] * 5)  # Increased timeout for AI
+            resp.raise_for_status()
+            
+            # TODO - TO BE REMOVED
+            # app.logger.info(f"Response From Agent: {resp.json}")
+            # app.logger.info(f"Response From Agent in JSON Format: {jsonify(resp.json())}")
+            app.logger.info(f"###Response From Agent: {resp.text}")
+            # return jsonify(resp.json())
+            return resp.json()
+        except (RequestException, HTTPError) as err:
+            app.logger.error('Error calling ai-assistant: %s', str(err))
+            return jsonify({'error': 'ai service unavailable'}), 500
+
+    def _parse_agent_response(agent_response):
+        """
+        Parses the raw response from the ADK agent to extract the text.
+
+        Args:
+            agent_response (list): The JSON response from the agent.
+
+        Returns:
+            dict: A dictionary with a single "response" key for the UI.
+        """
+        try:
+            # The agent's text is in the first part of the first content object.
+            text_response = agent_response[0]['content']['parts'][0]['text']
+            # Clean up newlines for better display
+            text_response = text_response.strip()
+            return {"response": text_response}
+            # return jsonify({"response": text_response}), 200
+        except (IndexError, KeyError, TypeError) as e:
+            app.logger.error(f"Error parsing agent response: {e}")
+            app.logger.error(f"Unexpected agent response format: {agent_response}")
+            # Provide a fallback response
+            return {"response": "I'm sorry, I received an unexpected response. Please try again."}
+
+    def decode_token(token, public_key):
+        """Decodes token with public key"""
+        return jwt.decode(algorithms=['RS256'],
+                        jwt=token,
+                        key=public_key,
+                        options={"verify_signature": True})
+
+
 
     @atexit.register
     def _shutdown():
@@ -138,7 +286,17 @@ def create_app():
     app.config['EXPIRY_SECONDS'] = int(os.environ.get('TOKEN_EXPIRY_SECONDS'))
     app.config['PRIVATE_KEY'] = open(os.environ.get('PRIV_KEY_PATH'), 'r').read()
     app.config['PUBLIC_KEY'] = open(os.environ.get('PUB_KEY_PATH'), 'r').read()
+    app.config['TOKEN_NAME'] = 'token'
+    # timeout in seconds for calls to the backend
+    app.config['BACKEND_TIMEOUT'] = int(os.getenv('BACKEND_TIMEOUT', '4'))
+    banking_agent_addr = os.environ.get('AI_BANKING_AGENT_URI_ADDR', 'banking-agent:80')
+    app.config["AI_BANKING_AGENT_URI"] = 'http://{}/run'.format(
+        banking_agent_addr)
+    
+    app.logger.info(f"************** At Startup AI_BANKING_AGENT_URI: {app.config['AI_BANKING_AGENT_URI']}")
     return app
+
+
 
 
 if __name__ == "__main__":
