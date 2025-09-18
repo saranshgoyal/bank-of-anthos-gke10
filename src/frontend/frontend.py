@@ -640,6 +640,8 @@ def create_app():
             # TODO - TO BE REMOVED
             app.logger.info(f"Response From Agent: {resp.json}")
             app.logger.info(f"Response From Agent in JSON Format: {jsonify(resp.json())}")
+            app.logger.info(f"###Response From Agent: {resp.text}")
+            
             return jsonify(resp.json())
         except (RequestException, HTTPError) as err:
             app.logger.error('Error calling ai-assistant: %s', str(err))

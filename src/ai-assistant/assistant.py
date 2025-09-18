@@ -71,7 +71,7 @@ def create_app():
         # Use request.args to get data from URL query parameters
         message = request.args.get('message')
 
-        app.logger.info(f"Request Received.. -->  {message}")
+        app.logger.info(f"******Request Received for chatget.. -->  {message}")
     
         # Check if the 'message' parameter exists in the URL
         if message:
@@ -88,20 +88,27 @@ def create_app():
         # Get the JSON data from the request
         data = request.get_json()
         
-        app.logger.info(f"Request Received.. -->  {data}")
+        # app.logger.info(f"Request Received.. -->  {data}")
+        app.logger.info(f"******Request Received for chat.. -->  {data}")
+        
+        # message = request.args.get('message')
+        message = data['message']
+        app.logger.info(f"$$$$$Received message in POST Request::: {message}")
 
         # Check if the 'message' key exists in the JSON data
-        if 'message' in data:
+        if message:
             # Extract the message and print it to the console
-            message = data['message']
-            print(f"Received message in POST: {message}")
+            # message = data['message']
+            app.logger.info(f"####Received message in POST Request: {message}")
             
 
             # Return a success response
-            return jsonify({"status": "success", "received_message": message}), 200
+            # return jsonify({"status": "success", "received_message": message}), 200
+            return jsonify({"response": f"I am a virtual assistant. You said: {message}"}), 200
+
         else:
             # Return an error response if the message is missing
-            return jsonify({"status": "error", "message": "Missing 'message' in request body"}), 400
+            return jsonify({"response": "Please say something....."}), 400
 
     @atexit.register
     def _shutdown():
