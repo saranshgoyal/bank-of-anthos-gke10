@@ -11,34 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: skaffold/v4beta1
 kind: Config
 metadata:
-  name: bank-of-anthos
+  name: ai-agents
 requires:
 - configs:
-  - accounts
-  path: src/accounts/skaffold.yaml
+  - e2e-tests
+  path: ../../skaffold-e2e.yaml
 - configs:
-  - ledger
-  path: src/ledger/skaffold.yaml
-- configs:
-  - frontend
-  path: src/frontend/skaffold.yaml
-- configs:
-  - loadgenerator
-  path: src/loadgenerator/skaffold.yaml
-- configs:
-  - accounts-db
-  path: src/accounts/accounts-db/skaffold.yaml
-- configs:
-  - ledger-db
-  path: src/ledger/ledger-db/skaffold.yaml
-- configs: 
-  - ai-assistant
-  path: src/ai-assistant/skaffold.yaml
-- configs: 
-  - ai-agents
-  path: src/ai-agents/skaffold.yaml  
+  - banking-agent
+  path: skaffold-a1.yaml
+# - configs:
+  # - weather-agent
+  # path: weather-agent/skaffold.yaml
 deploy:
   tolerateFailuresUntilDeadline: true
